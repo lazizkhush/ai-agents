@@ -1,0 +1,50 @@
+[
+    {
+        "role": "user",
+        "parts": [
+            {
+                "text": "hi, i am bob"
+            }
+        ]
+    },
+    {
+        "role": "model",
+        "parts": [
+            {
+                "text": "Hi Bob! It's great to meet you.\n\nHow can I help you today?"
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "parts": [
+            {
+                "text": "i am 24"
+            }
+        ]
+    },
+    {
+        "role": "model",
+        "parts": [
+            {
+                "text": "Okay, Bob, so you're 24. Got it!\n\nIs there anything specific you wanted to talk about or know regarding your age, or are you just sharing a bit more about yourself?"
+            }
+        ]
+    },
+    {
+        "role": "user",
+        "parts": [
+            {
+                "text": "i have 2 brothers"
+            }
+        ]
+    },
+    {
+        "role": "model",
+        "parts": [
+            {
+                "text": "Okay, Bob, so you're 24, and you have two brothers!\n\nAre you the oldest, youngest, or the middle one among your siblings? And what's it like having two brothers?"
+            }
+        ]
+    }
+]
