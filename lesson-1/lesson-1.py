@@ -1,15 +1,9 @@
 from google import genai
-from dotenv import load_dotenv
 import json
 import requests
 import os
 
-load_dotenv()
-
 API_KEY = os.getenv("GEMINI_API_KEY")
-
-client = genai.Client()
-chat = client.chats.create(model="gemini-2.5-flash")
 
 url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 headers = {
