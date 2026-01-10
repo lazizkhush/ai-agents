@@ -3,28 +3,14 @@ load_dotenv('.env')
 import requests
 from google.genai import Client
 from google.genai import types
+from sqlalchemy import text
+from sqlalchemy import create_engine
 
+engine = create_engine(
+    "postgresql+psycopg://postgres:xref14max@localhost:5432/mydb"
+)
 client = Client()
 
-
-# mul_fn_dec = {
-#     "name": "mul",
-#     "description": "Multiplies two numbers and returns output.",
-#     "parameters": {
-#         "type": "object",
-#         "properties": {
-#             "a": {
-#                 "type": "number",
-#                 "description": "First number",
-#             },
-#             "b": {
-#                 "type": "number",
-#                 "description": "The second number",
-#             },
-#         },
-#         "required": ["a", "b"],
-#     },
-# }
 
 def mul(a: float, b: float) -> float:
     """
@@ -42,13 +28,18 @@ def get_user_information(user_id: int) -> dict:
 
 
 def db_tool(query: str):
-    
-    pass
+    """
+    runs the provided SQL query to read the data in the database and returns the result 
+    """
+    with engine.connect() as conn:
+        result = conn.execute(text(query))
+        rows = result.fetchall()
+        return rows
 
 
 # tools = types.Tool(function_declarations=[mul])
 config = types.GenerateContentConfig(
-    tools=[mul, get_user_information],
+    tools=[mul, get_user_information, db_tool],
     system_instruction="Always answer with human readable format after tool calling."
 )
 
@@ -62,12 +53,7 @@ response = client.models.generate_content(
     config=config
 )
 
-response
 
-print(response.text)
-
-
-print(f"{13655216 * 1234531:,}")
 
 if response.candidates[0].content.parts[0].function_call is not None:
     fn = response.candidates[0].content.parts[0].function_call
@@ -81,5 +67,3 @@ else:
 
 print(response.text)
 
-
-print(f"{13655216 * 1234531:,}")
