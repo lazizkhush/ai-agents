@@ -1,7 +1,6 @@
-import sqlite3
+from sqlalchemy import create_engine, text
 
-con = sqlite3.connect("db.sqlite3")
-cur = con.cursor()
+engine = create_engine("postgresql+psycopg://postgres:xref14max@localhost:5432/ai_agents")
 
 
 create_table_script = """
@@ -20,11 +19,9 @@ create table history(
 );
 """
 
+with engine.begin() as conn:
+    conn.execute(text(create_table_script))
 
-cur.executescript(create_table_script)
-
-cur.close()
-con.close()
 
 
 

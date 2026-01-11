@@ -4,6 +4,7 @@ from getpass import getpass
 from google.genai import Client
 from dotenv import load_dotenv
 from google.genai.types import UserContent, ModelContent
+from sqlalchemy import create_engine, text
 
 load_dotenv('.env')
 
@@ -22,50 +23,73 @@ class UserNotFound(Exception):
 
 class DB:
     def __init__(self):
-        self.con = sqlite3.connect("db.sqlite3")
-        self.cur = self.con.cursor()
+        self.engine = create_engine("postgresql+psycopg://postgres:xref14max@localhost:5432/ai_agents")
 
     def register(self, username, password):
-        self.cur.execute("select 1 from users where username = ?;", (username,))
-        is_exists = self.cur.fetchone()
-        if is_exists:
-            raise DuplicateUser(f"User with {username=} already exists.")
+        check_sql = text("select 1 from users where username = :username;")
+        insert_sql = text("insert into users(username, password) values (:username, :password);")
 
-        try:
-            self.cur.execute("insert into users(username, password) values (?, ?);", (username, password))
-            self.con.commit()
-        except Exception as e:
-            self.con.rollback()
-            print(f"Error: {e}")
+        with self.engine.begin() as conn:
+            result = conn.execute(check_sql, {'username':username, 'password':password})
+            does_exists = result.fetchone()
+            if does_exists:
+                raise DuplicateUser(f"User with username={username} already exists.")
+            
+            conn.execute(insert_sql, {"username":username, "password":password})
 
 
     def login(self, username, password):
-        self.cur.execute("select id from users where username=? and password=?;", (username, password))
-        row = self.cur.fetchone()
-        if row is None:
-            raise UserNotFound(f"login or password is incorrect.")
-        user_id = row[0]
-        return user_id
+        with self.engine.connect() as conn:
+            result = conn.execute(text(
+                """
+                select id from users 
+                where username=:username and 
+                password=:password;
+                """
+                , {"username" : username, "password":password}))
+
+            row = result.fetchone()
+            if row is None:
+                raise UserNotFound(f"login or password is incorrect.")
+            user_id = row[0]
+            return user_id
 
     def load_history(self, user_id):
-        self.cur.execute("select message, role from history where user_id=? order by user_message_id;", (user_id,))
-        rows = self.cur.fetchall()
-        formatted_history = []
-        for row in rows:
-            if row[1] == 'user':
-                formatted_history.append(UserContent(row[0]))
-            elif row[1] == 'model':
-                formatted_history.append(ModelContent(row[0]))
-        return formatted_history
+        with self.engine.connect() as conn:
+            query = conn.execute(text("""
+                select message, role 
+                from history 
+                where user_id=:user_id 
+                order by user_message_id;
+            """), {"user_id" : user_id})
+        
+            rows = query.fetchall()
+            formatted_history = []
+            for row in rows:
+                if row[1] == 'user':
+                    formatted_history.append(UserContent(row[0]))
+                elif row[1] == 'model':
+                    formatted_history.append(ModelContent(row[0]))
+            return formatted_history
 
     def save_message(self, user_id, message, role):
-        self.cur.execute("select max(user_message_id) from history where user_id=?;", (user_id,))
-        row = self.cur.fetchone()
-        user_message_id = row[0] + 1 if row[0] is not None else 1
+        with self.engine.begin() as conn:
+            result = conn.execute(text("""
+            select max(user_message_id) 
+            from history where user_id=:user_id;
+            """), {{user_id}:user_id})
+            row = result.fetchone()
+            user_message_id = row[0] + 1 if row[0] is not None else 1
 
-        self.cur.execute("insert into history(user_id, user_message_id, message, role) values (?, ?, ?, ?)", 
-                         (user_id, user_message_id, message, role))
-        self.con.commit()
+            conn.execute(text(
+                """
+                insert into 
+                history(user_id, user_message_id, message, role) 
+                values (:user_id, :user_message_id, :message, :role)
+                """
+            ), {"user_id":user_id, "user_message_id":user_message_id, "message":message, "role":role})
+
+           
 
 
 class Agent:
